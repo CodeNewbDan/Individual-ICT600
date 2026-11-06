@@ -80,27 +80,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <!-- Bootstrap 5 CDN CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-      html, body {
-        height: 100%;
-      }
-      .form-signin {
-        max-width: 400px;
-        padding: 1.5rem;
-      }
-      .form-signin .form-floating:focus-within {
-        z-index: 2;
-      }
-    </style>
+    <!-- Custom Palette Styles -->
+    <link href="style.css" rel="stylesheet">
   </head>
-  <body class="d-flex align-items-center py-4 bg-body-tertiary">
+  <body class="d-flex align-items-center py-4">
 
-    <main class="form-signin w-100 m-auto bg-white p-4 p-sm-5 rounded-4 shadow-sm">
+    <main class="form-auth form-signin auth-card">
       <form action="login.php" method="POST" novalidate>
         
         <div class="text-center mb-4">
-          <h1 class="h3 fw-bold text-primary">Staff Portal</h1>
+          <h1 class="h3 brand-gradient-text mb-1">Staff Portal</h1>
           <p class="text-muted small">Sign in to access your dashboard</p>
         </div>
 
@@ -166,7 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <!-- Register Link -->
         <div class="text-center mt-4">
           <span class="text-secondary small">Don't have an account? </span>
-          <a href="register.php" class="text-decoration-none small fw-semibold">Register here</a>
+          <a href="register.php" class="auth-link small">Register here</a>
         </div>
 
         <p class="mt-4 mb-0 text-center text-body-secondary small">&copy; <?= date('Y') ?> Staff System</p>

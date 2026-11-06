@@ -1,0 +1,169 @@
+/**
+ * style.css - Custom Color Palette & Global Theme
+ * Palette:
+ *  - Bright Teal Blue: #2176ae (Primary Action / Brand)
+ *  - Cool Sky:         #57b8ff (Accent / Highlights / Glow)
+ *  - Copperwood:       #b66d0d (Deep Amber / Neutral Dark Accent)
+ *  - Honey Bronze:     #fbb13c (Warning / Secondary Accent / Badges)
+ *  - Tomato:           #fe6847 (Danger / Alerts / Delete Actions)
+ */
+
+:root {
+  /* Raw Palette Variables */
+  --bright-teal-blue: #2176ae;
+  --cool-sky: #57b8ff;
+  --copperwood: #b66d0d;
+  --honey-bronze: #fbb13c;
+  --tomato: #fe6847;
+
+  /* Semantic Theme Mapping */
+  --primary-color: var(--bright-teal-blue);
+  --primary-hover: #1b6291;
+  --secondary-color: var(--cool-sky);
+  --warning-color: var(--honey-bronze);
+  --danger-color: var(--tomato);
+  --dark-accent: var(--copperwood);
+
+  /* Surfaces & Backgrounds */
+  --bg-page: #f4f8fb;
+  --bg-card: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-subtle: rgba(33, 118, 174, 0.15);
+}
+
+/* Global Page Setup */
+html, body {
+  height: 100%;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Brand Text & Accents */
+.brand-title {
+  color: var(--bright-teal-blue);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand-gradient-text {
+  background: linear-gradient(135deg, var(--bright-teal-blue), var(--cool-sky));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+
+/* Primary Button Styling */
+.btn-primary {
+  background-color: var(--bright-teal-blue) !important;
+  border-color: var(--bright-teal-blue) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(33, 118, 174, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Danger Button (Tomato) */
+.btn-danger {
+  background-color: var(--tomato) !important;
+  border-color: var(--tomato) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.btn-danger:hover {
+  background-color: #e55535 !important;
+  border-color: #e55535 !important;
+}
+
+/* Warning / Secondary Button (Honey Bronze) */
+.btn-warning {
+  background-color: var(--honey-bronze) !important;
+  border-color: var(--honey-bronze) !important;
+  color: #2c1a04 !important;
+  font-weight: 600;
+}
+
+/* Form Controls & Floating Labels */
+.form-control:focus {
+  border-color: var(--bright-teal-blue);
+  box-shadow: 0 0 0 0.25rem rgba(87, 184, 255, 0.35); /* Cool sky glow */
+}
+
+.form-floating:focus-within {
+  z-index: 2;
+}
+
+/* Auth Cards (Sign-in / Register) */
+.form-auth {
+  width: 100%;
+  padding: 1.5rem;
+  margin: auto;
+}
+
+.form-signin {
+  max-width: 420px;
+}
+
+.form-register {
+  max-width: 460px;
+}
+
+.auth-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(33, 118, 174, 0.08), 0 8px 10px -6px rgba(33, 118, 174, 0.04);
+  border-top: 5px solid var(--bright-teal-blue); /* Distinct brand top border */
+}
+
+/* Links */
+a.auth-link {
+  color: var(--bright-teal-blue);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+a.auth-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Alerts Customized to Palette */
+.alert-danger {
+  background-color: rgba(254, 104, 71, 0.12);
+  border-color: rgba(254, 104, 71, 0.35);
+  color: #b92b0c;
+}
+
+.alert-success {
+  background-color: rgba(33, 118, 174, 0.12);
+  border-color: rgba(33, 118, 174, 0.35);
+  color: var(--bright-teal-blue);
+}
+
+/* Custom Badges */
+.badge-copper {
+  background-color: var(--copperwood);
+  color: #ffffff;
+}
+
+.badge-honey {
+  background-color: var(--honey-bronze);
+  color: #2c1a04;
+}
+
+.badge-sky {
+  background-color: var(--cool-sky);
+  color: #0b3452;
+}
+
