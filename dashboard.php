@@ -27,10 +27,14 @@ $flash_success = $_SESSION["flash_success"] ?? "";
 $flash_error = $_SESSION["flash_error"] ?? "";
 unset($_SESSION["flash_success"], $_SESSION["flash_error"]);
 
-// Fetch projects belonging to this staff member
+// Fetch projects belonging to this staff member with category name
 $projects = [];
 try {
-    $stmt = $conn->prepare("SELECT project_id, staff_id, category_id, title, project_description, status, created_at FROM project WHERE staff_id = ? ORDER BY created_at DESC");
+    $stmt = $conn->prepare("SELECT p.project_id, p.staff_id, p.category_id, p.title, p.project_description, p.status, p.created_at, c.category_name 
+                           FROM project p 
+                           LEFT JOIN category c ON p.category_id = c.category_id 
+                           WHERE p.staff_id = ? 
+                           ORDER BY p.created_at DESC");
     $stmt->execute([$staff_id]);
     $projects = $stmt->fetchAll();
     $stmt = null;
@@ -262,7 +266,8 @@ foreach ($projects as $p) {
                         </td>
                         <td>
                           <span class="badge badge-sky px-2 py-1">
-                            <?= !empty($project["category_id"]) ? 'Cat #' . htmlspecialchars($project["category_id"]) : 'General' ?>
+                            <i class="bi bi-tag-fill me-1 small"></i>
+                            <?= htmlspecialchars($project["category_name"] ?? (!empty($project["category_id"]) ? 'Cat #' . $project["category_id"] : 'Uncategorized')) ?>
                           </span>
                         </td>
                         <td class="text-muted small text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($project["project_description"] ?? '') ?>">
