@@ -122,10 +122,14 @@ try {
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="navbar-nav flex-row ms-auto align-items-center gap-3">
+    <div class="navbar-nav flex-row ms-auto align-items-center gap-2">
       <span class="text-white-50 small d-none d-sm-inline">
         Logged in as: <strong class="text-white"><?= htmlspecialchars($full_name) ?></strong>
       </span>
+      <a class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" href="profile.php">
+        <i class="bi bi-person"></i>
+        <span class="d-none d-md-inline">Profile</span>
+      </a>
       <a class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" href="logout.php">
         <i class="bi bi-box-arrow-right"></i>
         <span>Sign out</span>
@@ -153,6 +157,12 @@ try {
               <a class="nav-link d-flex align-items-center gap-2" href="project_create.php">
                 <i class="bi bi-plus-circle"></i>
                 New Project
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link d-flex align-items-center gap-2" href="profile.php">
+                <i class="bi bi-person-circle"></i>
+                Staff Profile
               </a>
             </li>
           </ul>

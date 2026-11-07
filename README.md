@@ -16,10 +16,10 @@ A full-stack web application designed for staff to manage projects, track action
 
 ## 🌟 Key Features
 
-* **Dual-Layer Validation and Secure Authentication**
-  * Server-side PHP validation and client-side JavaScript validation
-  * Secure password hashing with modern `PASSWORD_DEFAULT`
+* **Staff Authentication & Profile CRUD**
+  * Secure authentication with dual-layer validation and `PASSWORD_DEFAULT`
   * Session fixation protection with `session_regenerate_id()`
+  * **Staff Profile Hub:** View account details and activity metrics, update profile name/email, change password, or permanently delete account with safe cascading data cleanup
 
 * **Interactive Project CRUD**
   * **CREATE:** Dynamic category combobox allows staff to pick existing categories or create new ones on the fly
@@ -46,7 +46,7 @@ A full-stack web application designed for staff to manage projects, track action
 The relational database consists of 5 tables:
 
 * `STAFF(staff_id(PK), user_name, full_name, email, password, created_at)`
-* `CATEGORY(category_id(PK), category_name, category_details)`
+* `CATEGORY(category_id(PK), category_name)`
 * `PROJECT(project_id(PK), staff_id(FK), category_id(FK), title, project_description, status, created_at)`
 * `TASK(task_id(PK), project_id(FK), task_name, is_completed)`
 * `ACTIVITY_LOG(activity_id(PK), staff_id(FK), activity_notes, logged_at)`
