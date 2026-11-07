@@ -102,6 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $insertStmt->execute([$user_name, $full_name, $email, $hashed_password]);
 
                 if ($insertStmt->rowCount() > 0) {
+                    $new_staff_id = $conn->lastInsertId();
+                    logActivity($conn, $new_staff_id, "New staff account registered: @" . $user_name . " (" . $full_name . ")");
+
                     // Set session manage and redirect to login page
                     $_SESSION["flash_success"] = "Registration successful! You can now log in with your credentials";
                     header("Location: login.php");

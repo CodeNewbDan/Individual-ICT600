@@ -98,6 +98,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $insertStmt->execute([$staff_id, $category_id, $title, $project_description, $status]);
 
             if ($insertStmt->rowCount() > 0) {
+                $new_project_id = $conn->lastInsertId();
+                logActivity($conn, $staff_id, "Created new project #" . $new_project_id . ": '" . $title . "' (Category: " . $category_name_input . ", Status: " . $status . ")");
+
                 $_SESSION["flash_success"] = "Project '" . htmlspecialchars($title) . "' was created successfully under category '" . htmlspecialchars($category_name_input) . "'!";
                 header("Location: dashboard.php");
                 exit;

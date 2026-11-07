@@ -58,6 +58,36 @@ foreach ($projects as $p) {
         $pending_count++;
     }
 }
+
+// Fetch recent activity audit trail for this staff member
+$recent_activities = [];
+try {
+    $actStmt = $conn->prepare("SELECT activity_id, activity_notes, logged_at FROM activity_log WHERE staff_id = ? ORDER BY logged_at DESC LIMIT 6");
+    $actStmt->execute([$staff_id]);
+    $recent_activities = $actStmt->fetchAll();
+    $actStmt = null;
+} catch (PDOException $e) {
+    // If activity_log table has not been created yet in MySQL, fail gracefully
+}
+
+// Fetch all tasks for this staff member's projects
+$tasks_by_project = [];
+try {
+    $taskStmt = $conn->prepare("SELECT t.task_id, t.project_id, t.task_name, t.is_completed 
+                               FROM task t 
+                               JOIN project p ON t.project_id = p.project_id 
+                               WHERE p.staff_id = ? 
+                               ORDER BY t.task_id ASC");
+    $taskStmt->execute([$staff_id]);
+    $all_tasks = $taskStmt->fetchAll();
+    $taskStmt = null;
+
+    foreach ($all_tasks as $t) {
+        $tasks_by_project[$t['project_id']][] = $t;
+    }
+} catch (PDOException $e) {
+    // Graceful fail if task table not created yet
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -237,8 +267,9 @@ foreach ($projects as $p) {
                     <th scope="col" style="width: 70px;">#ID</th>
                     <th scope="col">Title</th>
                     <th scope="col">Category</th>
-                    <th scope="col" style="max-width: 250px;">Description</th>
+                    <th scope="col" style="max-width: 230px;">Description</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Subtasks</th>
                     <th scope="col">Created Date</th>
                     <th scope="col" class="text-end" style="min-width: 150px;">Actions</th>
                   </tr>
@@ -246,7 +277,7 @@ foreach ($projects as $p) {
                 <tbody>
                   <?php if (empty($projects)): ?>
                     <tr>
-                      <td colspan="7" class="text-center py-5">
+                      <td colspan="8" class="text-center py-5">
                         <div class="py-4">
                           <i class="bi bi-folder-x fs-1 text-muted"></i>
                           <h6 class="mt-3 fw-bold text-dark">No Projects Found</h6>
@@ -259,8 +290,14 @@ foreach ($projects as $p) {
                     </tr>
                   <?php else: ?>
                     <?php foreach ($projects as $project): ?>
+                      <?php 
+                        $pid = $project["project_id"];
+                        $p_tasks = $tasks_by_project[$pid] ?? [];
+                        $total_t = count($p_tasks);
+                        $done_t = count(array_filter($p_tasks, fn($t) => $t["is_completed"] == 1));
+                      ?>
                       <tr>
-                        <td class="fw-bold text-muted">#<?= htmlspecialchars($project["project_id"]) ?></td>
+                        <td class="fw-bold text-muted">#<?= htmlspecialchars($pid) ?></td>
                         <td>
                           <strong class="text-dark"><?= htmlspecialchars($project["title"]) ?></strong>
                         </td>
@@ -270,7 +307,7 @@ foreach ($projects as $p) {
                             <?= htmlspecialchars($project["category_name"] ?? (!empty($project["category_id"]) ? 'Cat #' . $project["category_id"] : 'Uncategorized')) ?>
                           </span>
                         </td>
-                        <td class="text-muted small text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($project["project_description"] ?? '') ?>">
+                        <td class="text-muted small text-truncate" style="max-width: 230px;" title="<?= htmlspecialchars($project["project_description"] ?? '') ?>">
                           <?= htmlspecialchars($project["project_description"] ?? 'No description provided.') ?>
                         </td>
                         <td>
@@ -286,6 +323,18 @@ foreach ($projects as $p) {
                           <span class="badge <?= $badgeClass ?> px-2 py-1">
                             <?= htmlspecialchars($status) ?>
                           </span>
+                        </td>
+                        <td>
+                          <button 
+                            type="button" 
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#taskModal-<?= $pid ?>"
+                            title="Manage Subtasks"
+                          >
+                            <i class="bi bi-list-check" style="color: var(--bright-teal-blue);"></i>
+                            <span class="small fw-bold"><?= $done_t ?>/<?= $total_t ?></span>
+                          </button>
                         </td>
                         <td class="text-muted small">
                           <?= date("M d, Y", strtotime($project["created_at"])) ?>
@@ -317,12 +366,196 @@ foreach ($projects as $p) {
             </div>
           </div>
 
+          <!-- Recent Activity Audit Trail Card -->
+          <div class="card border-0 shadow-sm rounded-3 mt-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0 fw-bold" style="color: var(--bright-teal-blue);">
+                <i class="bi bi-clock-history me-2"></i>Recent Activity (Audit Trail)
+              </h5>
+              <span class="badge bg-light text-muted border">Automated</span>
+            </div>
+            <div class="card-body p-0">
+              <?php if (empty($recent_activities)): ?>
+                <div class="p-4 text-center text-muted small">
+                  <i class="bi bi-journal-text fs-3 d-block mb-2 text-muted"></i>
+                  No automated activity recorded yet. Perform actions like creating or editing projects to see your audit log!
+                </div>
+              <?php else: ?>
+                <ul class="list-group list-group-flush">
+                  <?php foreach ($recent_activities as $act): ?>
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="background-color: rgba(33, 118, 174, 0.1); color: var(--bright-teal-blue); width: 36px; height: 36px;">
+                          <i class="bi bi-activity"></i>
+                        </div>
+                        <div>
+                          <div class="text-dark fw-medium small mb-0"><?= htmlspecialchars($act["activity_notes"]) ?></div>
+                          <div class="text-muted" style="font-size: 0.75rem;">Log #<?= htmlspecialchars($act["activity_id"]) ?></div>
+                        </div>
+                      </div>
+                      <span class="text-muted small" style="font-size: 0.8rem;">
+                        <i class="bi bi-calendar3 me-1"></i><?= date("M d, Y h:i A", strtotime($act["logged_at"])) ?>
+                      </span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </div>
+          </div>
+
         </main>
       </div>
     </div>
 
+    <!-- ================= SUBTASK MODALS (One per project) ================= -->
+    <?php foreach ($projects as $project): ?>
+      <?php 
+        $pid = $project['project_id'];
+        $p_tasks = $tasks_by_project[$pid] ?? [];
+        $total_t = count($p_tasks);
+        $done_t = count(array_filter($p_tasks, fn($t) => $t["is_completed"] == 1));
+        $pct_t = $total_t > 0 ? round(($done_t / $total_t) * 100) : 0;
+      ?>
+      <div class="modal fade" id="taskModal-<?= $pid ?>" tabindex="-1" aria-labelledby="taskModalLabel-<?= $pid ?>" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content rounded-4 border-0 shadow">
+            
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom py-3 px-4">
+              <div>
+                <h5 class="modal-title fw-bold" id="taskModalLabel-<?= $pid ?>" style="color: var(--bright-teal-blue);">
+                  <i class="bi bi-list-task me-2"></i><?= htmlspecialchars($project['title']) ?>
+                </h5>
+                <div class="text-muted small">Subtasks & Progress Tracking</div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4">
+              
+              <!-- Progress Indicator -->
+              <div class="d-flex justify-content-between align-items-center mb-2 small">
+                <span class="fw-semibold text-dark">Progress:</span>
+                <span class="badge badge-sky px-2 py-1"><?= $done_t ?> of <?= $total_t ?> Completed (<?= $pct_t ?>%)</span>
+              </div>
+              <div class="progress mb-4" style="height: 8px;">
+                <div 
+                  class="progress-bar" 
+                  role="progressbar" 
+                  style="width: <?= $pct_t ?>%; background-color: var(--bright-teal-blue);" 
+                  aria-valuenow="<?= $pct_t ?>" 
+                  aria-valuemin="0" 
+                  aria-valuemax="100"
+                ></div>
+              </div>
+
+              <!-- Subtasks Checklist -->
+              <h6 class="fw-bold small text-muted text-uppercase mb-2">Checklist</h6>
+              <?php if (empty($p_tasks)): ?>
+                <div class="p-3 text-center text-muted small bg-light rounded-3 mb-3">
+                  <i class="bi bi-clipboard2-check fs-4 d-block mb-1 text-muted"></i>
+                  No subtasks added yet. Type your first subtask below!
+                </div>
+              <?php else: ?>
+                <div class="list-group list-group-flush border rounded-3 mb-3">
+                  <?php foreach ($p_tasks as $task): ?>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                      
+                      <!-- Toggle Status Checkbox Form -->
+                      <form action="task_action.php" method="POST" class="d-flex align-items-center gap-2 mb-0 flex-grow-1">
+                        <input type="hidden" name="action" value="toggle">
+                        <input type="hidden" name="project_id" value="<?= $pid ?>">
+                        <input type="hidden" name="task_id" value="<?= $task['task_id'] ?>">
+                        
+                        <input 
+                          class="form-check-input mt-0" 
+                          type="checkbox" 
+                          id="taskCheck-<?= $task['task_id'] ?>" 
+                          <?= $task['is_completed'] ? 'checked' : '' ?>
+                          onchange="this.form.submit()"
+                          style="cursor: pointer;"
+                        >
+                        <label 
+                          class="form-check-label mb-0 small <?= $task['is_completed'] ? 'text-decoration-line-through text-muted' : 'text-dark fw-medium' ?>" 
+                          for="taskCheck-<?= $task['task_id'] ?>"
+                          style="cursor: pointer;"
+                        >
+                          <?= htmlspecialchars($task['task_name']) ?>
+                        </label>
+                      </form>
+
+                      <!-- Delete Subtask Form -->
+                      <form action="task_action.php" method="POST" class="mb-0 ms-2">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="project_id" value="<?= $pid ?>">
+                        <input type="hidden" name="task_id" value="<?= $task['task_id'] ?>">
+                        <button 
+                          type="submit" 
+                          class="btn btn-sm btn-link text-danger p-0" 
+                          title="Delete subtask" 
+                          onclick="return confirm('Remove subtask: <?= htmlspecialchars(addslashes($task['task_name'])) ?>?');"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
+
+              <!-- Add New Subtask Inline Form -->
+              <div class="card bg-light border-0 p-3 rounded-3 mt-3">
+                <h6 class="fw-bold small text-dark mb-2">
+                  <i class="bi bi-plus-circle-fill text-primary me-1"></i> Add New Subtask
+                </h6>
+                <form action="task_action.php" method="POST">
+                  <input type="hidden" name="action" value="add">
+                  <input type="hidden" name="project_id" value="<?= $pid ?>">
+                  <div class="input-group">
+                    <input 
+                      type="text" 
+                      name="task_name" 
+                      class="form-control" 
+                      placeholder="e.g. Design wireframes, test database..." 
+                      required
+                      autocomplete="off"
+                    >
+                    <button type="submit" class="btn btn-primary d-flex align-items-center gap-1">
+                      <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top py-2 px-4">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    <?php endforeach; ?>
+
     <!-- Bootstrap 5 JavaScript Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Auto-reopen modal if redirected from task action -->
+    <?php if (!empty($_GET['open_modal'])): ?>
+      <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          const modalEl = document.getElementById("taskModal-<?= (int)$_GET['open_modal'] ?>");
+          if (modalEl) {
+            const modalInstance = new bootstrap.Modal(modalEl);
+            modalInstance.show();
+          }
+        });
+      </script>
+    <?php endif; ?>
   </body>
 </html>
 

@@ -57,6 +57,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION["full_name"] = $user["full_name"];
                 $_SESSION["email"] = $user["email"];
 
+                // Automated Audit Trail
+                logActivity($conn, $user["staff_id"], "Staff logged into the system (@" . $user["user_name"] . ")");
+
                 // Redirect to dashboard
                 header("Location: dashboard.php");
                 exit;

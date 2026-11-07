@@ -22,3 +22,6 @@ try {
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
+
+// Automatically load the audit trail logger everywhere db.php is included
+require_once("logger.php");

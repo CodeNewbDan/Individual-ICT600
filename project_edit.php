@@ -61,6 +61,26 @@ try {
     $cat_error = "Unable to load categories: " . $e->getMessage();
 }
 
+// Retrieve and clear flash notification messages
+$flash_success = $_SESSION["flash_success"] ?? "";
+$flash_error = $_SESSION["flash_error"] ?? "";
+unset($_SESSION["flash_success"], $_SESSION["flash_error"]);
+
+// Fetch subtasks for this specific project
+$project_tasks = [];
+try {
+    $taskStmt = $conn->prepare("SELECT task_id, task_name, is_completed FROM task WHERE project_id = ? ORDER BY task_id ASC");
+    $taskStmt->execute([$project_id]);
+    $project_tasks = $taskStmt->fetchAll();
+    $taskStmt = null;
+} catch (PDOException $e) {
+    // Fail gracefully if task table is not yet configured
+}
+
+$total_tasks = count($project_tasks);
+$done_tasks = count(array_filter($project_tasks, fn($t) => $t["is_completed"] == 1));
+$task_pct = $total_tasks > 0 ? round(($done_tasks / $total_tasks) * 100) : 0;
+
 // Initialize form variables with existing database values
 $errors = [];
 $title = $project["title"];
@@ -124,6 +144,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                          SET category_id = ?, title = ?, project_description = ?, status = ? 
                                          WHERE project_id = ? AND staff_id = ?");
             $updateStmt->execute([$category_id, $title, $project_description, $status, $project_id, $staff_id]);
+
+            // Automated Audit Trail
+            logActivity($conn, $staff_id, "Updated project #" . $project_id . " ('" . $title . "') - Status set to '" . $status . "'");
 
             $_SESSION["flash_success"] = "Project '" . htmlspecialchars($title) . "' was updated successfully!";
             header("Location: dashboard.php");
@@ -243,6 +266,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
           </div>
 
+          <!-- Flash Notifications -->
+          <?php if (!empty($flash_success)): ?>
+            <div class="alert alert-success alert-dismissible fade show small" role="alert">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              <?= htmlspecialchars($flash_success) ?>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <?php endif; ?>
+
+          <?php if (!empty($flash_error)): ?>
+            <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <?= htmlspecialchars($flash_error) ?>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <?php endif; ?>
+
           <!-- Error Alert Notification -->
           <?php if (!empty($errors)): ?>
             <div class="alert alert-danger py-2 small" role="alert">
@@ -354,6 +394,119 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                   </form>
                 </div>
               </div>
+
+              <!-- Project Subtasks & Checklist Card -->
+              <div class="card border-0 shadow-sm rounded-3 mt-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="card-title mb-0 fw-bold" style="color: var(--bright-teal-blue);">
+                      <i class="bi bi-list-check me-2"></i>Project Subtasks
+                    </h5>
+                    <div class="text-muted small">Manage and check off actionable items for this project</div>
+                  </div>
+                  <span class="badge badge-sky px-2 py-1">
+                    <?= $done_tasks ?> of <?= $total_tasks ?> Completed (<?= $task_pct ?>%)
+                  </span>
+                </div>
+
+                <div class="card-body p-4">
+                  <!-- Progress Bar -->
+                  <div class="progress mb-4" style="height: 8px;">
+                    <div 
+                      class="progress-bar" 
+                      role="progressbar" 
+                      style="width: <?= $task_pct ?>%; background-color: var(--bright-teal-blue);" 
+                      aria-valuenow="<?= $task_pct ?>" 
+                      aria-valuemin="0" 
+                      aria-valuemax="100"
+                    ></div>
+                  </div>
+
+                  <!-- Subtasks Checklist -->
+                  <h6 class="fw-bold small text-muted text-uppercase mb-2">Checklist</h6>
+                  <?php if (empty($project_tasks)): ?>
+                    <div class="p-3 text-center text-muted small bg-light rounded-3 mb-3">
+                      <i class="bi bi-clipboard2-check fs-4 d-block mb-1 text-muted"></i>
+                      No subtasks added yet for this project. Use the form below to add one!
+                    </div>
+                  <?php else: ?>
+                    <div class="list-group list-group-flush border rounded-3 mb-3">
+                      <?php foreach ($project_tasks as $task): ?>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                          
+                          <!-- Toggle Status Form -->
+                          <form action="task_action.php" method="POST" class="d-flex align-items-center gap-2 mb-0 flex-grow-1">
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="return_to" value="edit">
+                            <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                            <input type="hidden" name="task_id" value="<?= $task['task_id'] ?>">
+                            
+                            <input 
+                              class="form-check-input mt-0" 
+                              type="checkbox" 
+                              id="editTaskCheck-<?= $task['task_id'] ?>" 
+                              <?= $task['is_completed'] ? 'checked' : '' ?>
+                              onchange="this.form.submit()"
+                              style="cursor: pointer;"
+                            >
+                            <label 
+                              class="form-check-label mb-0 small <?= $task['is_completed'] ? 'text-decoration-line-through text-muted' : 'text-dark fw-medium' ?>" 
+                              for="editTaskCheck-<?= $task['task_id'] ?>"
+                              style="cursor: pointer;"
+                            >
+                              <?= htmlspecialchars($task['task_name']) ?>
+                            </label>
+                          </form>
+
+                          <!-- Delete Subtask Form -->
+                          <form action="task_action.php" method="POST" class="mb-0 ms-2">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="return_to" value="edit">
+                            <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                            <input type="hidden" name="task_id" value="<?= $task['task_id'] ?>">
+                            <button 
+                              type="submit" 
+                              class="btn btn-sm btn-link text-danger p-0" 
+                              title="Delete subtask" 
+                              onclick="return confirm('Remove subtask: <?= htmlspecialchars(addslashes($task['task_name'])) ?>?');"
+                            >
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+
+                        </div>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+
+                  <!-- Add New Subtask Inline Form -->
+                  <div class="card bg-light border-0 p-3 rounded-3 mt-3">
+                    <h6 class="fw-bold small text-dark mb-2">
+                      <i class="bi bi-plus-circle-fill text-primary me-1"></i> Add New Subtask
+                    </h6>
+                    <form action="task_action.php" method="POST">
+                      <input type="hidden" name="action" value="add">
+                      <input type="hidden" name="return_to" value="edit">
+                      <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                      <div class="input-group">
+                        <input 
+                          type="text" 
+                          name="task_name" 
+                          class="form-control" 
+                          placeholder="e.g. Design wireframes, test database..." 
+                          required
+                          autocomplete="off"
+                        >
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-1">
+                          <i class="bi bi-plus-lg"></i> Add
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                </div>
+              </div>
+
             </div>
 
             <!-- Right Column: Meta Info & Status Guide (4 cols) -->

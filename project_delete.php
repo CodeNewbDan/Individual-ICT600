@@ -38,6 +38,9 @@ try {
         $deleteStmt->execute([$project_id, $staff_id]);
 
         if ($deleteStmt->rowCount() > 0) {
+            // Automated Audit Trail
+            logActivity($conn, $staff_id, "Deleted project #" . $project_id . " ('" . $project["title"] . "')");
+
             $_SESSION["flash_success"] = "Project '" . htmlspecialchars($project["title"]) . "' was deleted successfully.";
         } else {
             $_SESSION["flash_error"] = "System error: Failed to delete the project. Please try again.";

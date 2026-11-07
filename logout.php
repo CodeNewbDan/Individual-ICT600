@@ -6,6 +6,14 @@
 
 session_start();
 
+// Include database to record logout activity
+require_once("db.php");
+
+// Automated Audit Trail
+if (!empty($_SESSION["user_id"])) {
+    logActivity($conn, $_SESSION["user_id"], "Staff signed out of the system");
+}
+
 // Unset all session variables
 $_SESSION = [];
 
