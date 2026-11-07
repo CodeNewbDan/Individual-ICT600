@@ -1,10 +1,18 @@
 /**
- * main.js - Client-Side Validation for Staff Registration
- * Provides real-time feedback and intercepts submission if input is invalid.
- * Uses Bootstrap 5 validation classes: .is-valid and .is-invalid
+ * main.js - Client-Side Scripts for Staff Portal
+ * 1. Dual-layer validation for Staff Registration (register.php)
+ * 2. Real-time Live Search for Dashboard Projects Table (dashboard.php)
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  initRegistrationValidation();
+  initLiveSearch();
+});
+
+// ==========================================
+// 1. REGISTRATION FORM VALIDATION (register.php)
+// ==========================================
+function initRegistrationValidation() {
   const form = document.getElementById("registerForm");
 
   // Only run if the registration form exists on the current page
@@ -22,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
     input.classList.remove("is-valid");
     input.classList.add("is-invalid");
 
-    // Look for existing invalid-feedback div or create one
     let feedback = input.parentElement.querySelector(".invalid-feedback");
     if (!feedback) {
       feedback = document.createElement("div");
@@ -74,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function validateEmail() {
     const val = emailInput.value.trim();
-    // Standard email regex pattern
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (val === "") {
       return setInvalid(emailInput, "Email address is required.");
@@ -122,7 +128,6 @@ document.addEventListener("DOMContentLoaded", () => {
   emailInput.addEventListener("input", validateEmail);
   passwordInput.addEventListener("input", () => {
     validatePassword();
-    // Re-check confirm password if user edits the main password
     if (confirmPasswordInput.value !== "") {
       validateConfirmPassword();
     }
@@ -132,24 +137,77 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Form Submission Intercept ---
 
   form.addEventListener("submit", (event) => {
-    // Run all validations
     const isNameValid = validateFullName();
     const isUserValid = validateUserName();
     const isEmailValid = validateEmail();
     const isPassValid = validatePassword();
     const isConfirmValid = validateConfirmPassword();
 
-    // If ANY validation fails, stop form submission
     if (!isNameValid || !isUserValid || !isEmailValid || !isPassValid || !isConfirmValid) {
       event.preventDefault();
       event.stopPropagation();
 
-      // Focus the first invalid field
       const firstInvalid = form.querySelector(".is-invalid");
       if (firstInvalid) {
         firstInvalid.focus();
       }
     }
   });
-});
+}
 
+// ==========================================
+// 2. LIVE TABLE SEARCH (dashboard.php)
+// ==========================================
+function initLiveSearch() {
+  const searchInput = document.getElementById("projectSearch");
+  const table = document.getElementById("projectTable");
+
+  // Only run if the search bar and project table exist on the current page
+  if (!searchInput || !table) return;
+
+  const tbody = table.querySelector("tbody");
+  if (!tbody) return;
+
+  // Dynamically create a "No matching records" placeholder row
+  let noMatchRow = document.getElementById("noSearchMatchRow");
+  if (!noMatchRow) {
+    noMatchRow = document.createElement("tr");
+    noMatchRow.id = "noSearchMatchRow";
+    noMatchRow.style.display = "none";
+    noMatchRow.innerHTML = `
+      <td colspan="8" class="text-center py-4 text-muted">
+        <i class="bi bi-search fs-3 d-block mb-1 text-muted"></i>
+        <span class="fw-semibold">No projects match your search keyword.</span>
+      </td>
+    `;
+    tbody.appendChild(noMatchRow);
+  }
+
+  searchInput.addEventListener("input", function () {
+    const query = this.value.toLowerCase().trim();
+    const rows = tbody.querySelectorAll("tr");
+    let matchCount = 0;
+
+    rows.forEach((row) => {
+      // Skip the "no match" row itself or empty-state row with <= 1 cell
+      if (row.id === "noSearchMatchRow" || row.cells.length <= 1) return;
+
+      const rowText = row.textContent.toLowerCase();
+
+      // Show row if it contains the search keyword, otherwise hide
+      if (query === "" || rowText.includes(query)) {
+        row.style.display = "";
+        matchCount++;
+      } else {
+        row.style.display = "none";
+      }
+    });
+
+    // If a search query is typed and no rows matched, show the "No projects match" message!
+    if (query !== "" && matchCount === 0) {
+      noMatchRow.style.display = "";
+    } else {
+      noMatchRow.style.display = "none";
+    }
+  });
+}
